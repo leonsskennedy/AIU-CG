@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login/Signup</title>
+</head>
+<body>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            
+        }
+        .left-section {
+            width: 33%;
+            background: linear-gradient(to bottom, #1e3a8a, #7f1d1d);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: 0 20px 20px 0;
+            text-align: center;
+        }
+        .left-section img {
+            width: 450px;
+            margin-bottom: 10px;
+        }
+        .stars {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        .stars span:nth-child(2) {
+            color: #7f1d1d;
+        }
+        .stars span:nth-child(3) {
+            color: #1e3a8a;
+        }
+        .right-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fefefe;
+        }
+        .button {
+            width: 200px;
+            padding: 10px;
+            background: #7f1d1d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .button:hover {
+            background: #991b1b;
+        }
+        p{
+            font-size: large;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="left-section">
+        <img src="logo.png" alt="AIUCG Logo">
+        <h1>Welcome to AIU-CG</h1>
+        <div class="stars">
+            <span>&#9733;</span>
+            <span>&#9733;</span>
+            <span>&#9733;</span>
+        </div>
+        <p>Explore services, academics, and your campus journey with ease.</p>
+    </div>
+    <div class="right-section">
+        <button class="button" onclick="window.location.href='LoginPage.html';">Login</button>
+        <button class="button"onclick="window.location.href='SignupPage.html';">Signup</button>
+        <p>Or</p>
+        <button class="button" id="guestButton">Continue as a guest</button>
+    </div>
+
+    <script>
+        document.getElementById('guestButton').addEventListener('click', function() {
+            window.location.href = '/ChatPage.html';
+        });
+    </script>
+</body>
+</html>
