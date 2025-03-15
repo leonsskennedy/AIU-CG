@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIU-CG Chat</title>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .sidebar {
+            width: 20%;
+            background-color: #29406B;
+            color: white;
+            padding: 20px;
+        }
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f4f4f4;
+            padding: 10px;
+        }
+        .chat-header img {
+            width: 100px;
+        }
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #7F1D1D;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-size: 18px;
+        }
+        .chat-box {
+            flex: 1;
+            background-color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 70%;
+        }
+        .user-message {
+            background-color: #29406B;
+            color: white;
+            margin-left: auto;
+        }
+        .bot-message {
+            background-color: #f0f0f0;
+            margin-right: auto;
+        }
+        .chat-input-container {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background-color: white;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #29406B;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .send-button {
+            margin-left: 10px;
+            background-color: #29406B;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .send-button:hover {
+            background-color: #1a2947;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Chat History</h2>
+    </div>
+    <div class="chat-container">
+        <div class="chat-header">
+            <img src="logo.png" alt="AIUCG Logo" onerror="this.textContent='AIU-CG Chat'">
+            <div class="profile-icon">U</div>
+        </div>
+        <div class="chat-box">
+            <div class="message bot-message">Hello! How can I help you today?</div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" placeholder="Type your message here...">
+            <button class="send-button" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            const input = document.querySelector('.chat-input');
+            const chatBox = document.querySelector('.chat-box');
+            
+            if (input.value.trim() !== '') {
+                // Add user message
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message user-message';
+                userMessage.textContent = input.value;
+                chatBox.appendChild(userMessage);
+                
+                // Add bot response
+                const botMessage = document.createElement('div');
+                botMessage.className = 'message bot-message';
+                botMessage.textContent = "I received your message: " + input.value;
+                setTimeout(() => {
+                    chatBox.appendChild(botMessage);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }, 500);
+                
+                // Clear input
+                input.value = '';
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        // Allow sending message with Enter key
+        document.querySelector('.chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

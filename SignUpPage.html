@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign up</title>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .left-section {
+            width: 33%;
+            background: linear-gradient(to bottom, #1e3a8a, #7f1d1d);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: 0 20px 20px 0;
+            text-align: center;
+        }
+
+        .left-section img {
+            width: 450px;
+            margin-bottom: 10px;
+        }
+
+        .stars {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+
+        .stars span:nth-child(2) {
+            color: #7f1d1d;
+        }
+
+        .stars span:nth-child(3) {
+            color: #1e3a8a;
+        }
+
+        .right-section {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fefefe;
+        }
+
+        .signup-box {
+            width: 350px;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+.signup-box h2 {
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .input-box {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .input-box input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .signup-button {
+            width: 100%;
+            padding: 10px;
+            background: #7f1d1d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .signup-button:hover {
+            background: #991b1b;
+        }
+
+        a {
+            display: block;
+            margin-top: 10px;
+            text-decoration: none;
+            color: #7f1d1d;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="left-section">
+        <img src="logo.png" alt="AIUCG Logo">
+        <h1>Welcome to AIU-CG</h1>
+        <div class="stars">
+            <span>&#9733;</span>
+            <span>&#9733;</span>
+            <span>&#9733;</span>
+        </div>
+        <p style="font-size: large; font-weight: bold;">Explore services, academics, and your campus journey with ease.</p>
+    </div>
+
+    <div class="right-section">
+        <div class="signup-box">
+            <h2>Sign up</h2>
+            <form>
+                <div class="input-box">
+                    <input type="text" placeholder="Username">
+                </div>
+                <div class="input-box">
+                    <input type="password" placeholder="Password">
+                </div>
+                <button type="submit" class="signup-button">Sign up</button>
+            </form>
+            <a href="index.html">Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>
