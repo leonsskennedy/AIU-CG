@@ -12,11 +12,12 @@ AIUChatBot is a university virtual assistant designed to help students at the Am
 - Lightweight and efficient for resource-limited settings
 
 **installation**
-clone the repoistory 
+- clone the repoistory 
 
 **dependencies**
 - figma for the interface design
 - visual studio code
+- cursor
   
 **usage**
 **Interact with the bot:**
