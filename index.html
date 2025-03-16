@@ -3,311 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIU-Kuwait Chatbot</title>
+    <title>Login/Signup</title>
+</head>
+<body>
     <style>
         body {
-            font-family: Arial, sans-serif;
             display: flex;
             height: 100vh;
             margin: 0;
+            font-family: Arial, sans-serif;
+
+
+
+
+
         }
-        #sidebar {
-            width: 20%;
-            background-color: #2c3e50;
+        .left-section {
+            width: 33%;
+            background: linear-gradient(to bottom, #1e3a8a, #7f1d1d);
             color: white;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
-        #chat-container {
-            width: 80%;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            background-color: #ecf0f1;
-        }
-        #header {
-            background-color: #f4f4f9;
-            padding: 10px;
-            display: flex;
             align-items: center;
-            justify-content: space-between;
-        }
-        #chatbox {
-            flex-grow: 1;
+            justify-content: center;
             padding: 20px;
-            overflow-y: auto;
+            border-radius: 0 20px 20px 0;
+            text-align: center;
         }
-        .chat-bubble {
-            background-color: #d6e4f0;
-            padding: 10px;
-            border-radius: 10px;
+        .left-section img {
+            width: 450px;
             margin-bottom: 10px;
-            max-width: 60%;
         }
-        .user {
-            align-self: flex-end;
-            background-color: #b0c4de;
+        .stars {
+            font-size: 24px;
+            margin: 10px 0;
         }
-        #footer {
-            padding: 10px;
+        .stars span:nth-child(2) {
+            color: #7f1d1d;
+        }
+        .stars span:nth-child(3) {
+            color: #1e3a8a;
+        }
+        .right-section {
+            flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            background-color: #f4f4f9;
+            justify-content: center;
+            background: #fefefe;
         }
-        #userInput {
-            flex-grow: 1;
+        .button {
+            width: 200px;
             padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-right: 10px;
-        }
-        button {
-            padding: 10px;
-            background-color: #007bff;
+            background: #7f1d1d;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
+            margin: 10px 0;
             cursor: pointer;
-            margin-left: 5px;
         }
-        button:hover {
-            background-color: #0056b3;
+        .button:hover {
+            background: #991b1b;
         }
-        .chat-history-item {
-            cursor: pointer;
-            margin-bottom: 10px;
-            padding: 5px;
-            background-color: #34495e;
-            border-radius: 4px;
-        }
-        .chat-history-item:hover {
-            background-color: #3b5998;
-        }
-        .logo {
-            width: 100px; /* Adjust size as needed */
-            height: auto;
-            display: block; /* Ensure it's visible */
-            margin: 0 auto; /* Center the logo if needed */
-        }
-        .chatbox {
-            width: 100%;
-            height: 300px;
-            border: 1px solid #ccc;
-            overflow-y: auto;
-        }
-        #userInput {
-            width: calc(100% - 100px);
-            padding: 10px;
-            margin-top: 10px;
-        }
-        button {
-            padding: 10px;
-            margin-top: 10px;
+        p{
+            font-size: large;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div id="sidebar">
-        <h2>Chat history</h2>
-        <div id="chatHistory"></div>
+    <div class="left-section">
+        <img src="logo.png" alt="AIUCG Logo">
+        <h1>Welcome to AIU-CG</h1>
+        <div class="stars">
+            <span>&#9733;</span>
+            <span>&#9733;</span>
+            <span>&#9733;</span>
+        </div>
+        <p>Explore services, academics, and your campus journey with ease.</p>
     </div>
-    <div id="chat-container">
-        <div id="header">
-            <img src="C:\Users\USER\Desktop\CursorTest\frontend\AIU-CG.png" alt="AIUCG Logo" class="logo">
-            <div>
-                <button onclick="newChat()">New Chat</button>
-                <button>Sign up</button>
-                <button>Log in</button>
-            </div>
-        </div>
-        <div id="chatbox"></div>
-        <div id="footer">
-            <input type="text" id="userInput" placeholder="Ask AIU-CG" onkeydown="checkEnter(event)">
-            <button onclick="sendMessage()">Send</button>
-        </div>
+    <div class="right-section">
+        <button class="button" onclick="window.location.href='LoginPage.html';">Login</button>
+        <button class="button"onclick="window.location.href='SignupPage.html';">Signup</button>
+        <p>Or</p>
+        <button class="button" id="guestButton">Continue as a guest</button>
     </div>
 
     <script>
-        const memory = [];
-        const chatHistory = [];
-        let lastTopic = null;
-        let currentUser = null;
-
-        // Updated simulated database
-        const database = {
-            courses: [
-                { id: 1, name: 'Introduction to AI', location: 'A-North Wing, Room 101', time: '9:00-9:50' },
-                { id: 2, name: 'Data Structures', location: 'A-North Wing, Room 202', time: '10:00-11:30' },
-                { id: 3, name: 'Web Development', location: 'A-South Wing, Room 303', time: '12:00-12:50' },
-                { id: 4, name: 'Database Management System', location: 'A-South Wing, Room 404', time: '13:00-14:30' },
-                { id: 5, name: 'Digital Forensics', location: 'A-North Wing, Room 505', time: '15:00-16:15' }
-            ],
-            users: [
-                { id: 3, name: 'Fatma', enrolledCourses: [2, 4], email: 'fatma@example.com' },
-                { id: 4, name: 'Mariam', enrolledCourses: [3, 5], email: 'mariam@example.com' },
-                { id: 5, name: 'Hend', enrolledCourses: [1, 3], email: 'hend@example.com' },
-                { id: 6, name: 'Mohammed', enrolledCourses: [4, 5], email: 'mohammed@example.com' }
-            ],
-            instructors: [
-                { id: 1, name: 'Dr. Lavanya', teaches: [2], email: 'lavanya@example.com' },
-                { id: 2, name: 'Dr. Munni', teaches: [4], email: 'munni@example.com' },
-                { id: 3, name: 'Dr. Ali', teaches: [5], email: 'ali@example.com' },
-                { id: 4, name: 'Dr. Areej', teaches: [3], email: 'areej@example.com' }
-            ],
-            locations: [
-                { id: 1, name: 'A-North Wing', floors: ['Room 101', 'Room 202', 'Room 505'] },
-                { id: 2, name: 'A-South Wing', floors: ['Room 303', 'Room 404'] }
-            ]
-        };
-
-        function sendMessage() {
-            const userInput = document.getElementById('userInput');
-            const chatbox = document.getElementById('chatbox');
-            const message = userInput.value.toLowerCase();
-            chatbox.innerHTML += `<div class="chat-bubble user">User: ${message}</div>`;
-            userInput.value = '';
-
-            // Store the message in memory
-            memory.push({ type: 'user', text: message });
-
-            // FAQ section
-            const faqs = {
-                'what are the office hours?': 'Our office hours are from 8:00 AM to 5:00 PM, Monday to Friday.',
-                'how can i apply?': 'You can apply by visiting our admissions page at <a href="https://www.aiu.edu.kw/admissions" target="_blank">AIU Admissions</a>.',
-                'where is the campus located?': 'Our campus is located at AIU-Kuwait, Jahra, Kuwait.'
-            };
-
-            let response = '';
-
-            // Check if the message matches any FAQ
-            if (faqs[message]) {
-                response = faqs[message];
-            } else if (message.includes('location of')) {
-                const courseName = message.replace('location of', '').trim();
-                const course = database.courses.find(c => c.name.toLowerCase() === courseName);
-                if (course) {
-                    response = `The location of ${course.name} is ${course.location}.`;
-                    lastTopic = course.name;
-                } else {
-                    response = 'Course not found. Please check the course name.';
-                }
-            } else if (message.includes('who teaches it') && lastTopic) {
-                const course = database.courses.find(c => c.name === lastTopic);
-                const instructor = database.instructors.find(i => i.teaches.includes(course.id));
-                if (instructor) {
-                    response = `${instructor.name} teaches ${lastTopic}.`;
-                } else {
-                    response = 'Instructor not found for the last mentioned course.';
-                }
-            } else if ((message.includes('email') || message.includes('contact')) && lastTopic) {
-                const course = database.courses.find(c => c.name === lastTopic);
-                const instructor = database.instructors.find(i => i.teaches.includes(course.id));
-                if (instructor) {
-                    response = `The email for ${instructor.name} is ${instructor.email}.`;
-                } else {
-                    response = 'Instructor not found for the last mentioned course.';
-                }
-            } else if (message.includes('course')) {
-                response = 'Here are some courses we offer: ' + database.courses.map(course => course.name).join(', ') + '.';
-            } else if (message.includes('user')) {
-                response = 'Here are some users: ' + database.users.map(user => user.name).join(', ') + '.';
-            } else if (message.includes('website')) {
-                response = 'You can visit our website at <a href="https://www.aiu.edu.kw" target="_blank">AIU-Kuwait</a>.';
-            } else if (message.includes('sign up')) {
-                response = 'You can sign up at <a href="https://www.aiu.edu.kw/signup" target="_blank">AIU-Kuwait Sign-Up</a>.';
-            } else {
-                // Predefined responses
-                const responses = {
-                    'hello': 'Hello! I am AIU-CG. How can I assist you today?',
-                    'aiu': 'AIU-Kuwait is a prestigious university offering various programs.',
-                    'programs': 'We offer programs in Engineering, Business, and more.',
-                    'contact': 'You can contact us at contact@aiu.edu.kw.',
-                    'default': 'I am sorry, I do not understand that question. Can you ask something else?'
-                };
-
-                // Function to calculate Levenshtein Distance
-                function levenshtein(a, b) {
-                    const matrix = [];
-                    for (let i = 0; i <= b.length; i++) {
-                        matrix[i] = [i];
-                    }
-                    for (let j = 0; j <= a.length; j++) {
-                        matrix[0][j] = j;
-                    }
-                    for (let i = 1; i <= b.length; i++) {
-                        for (let j = 1; j <= a.length; j++) {
-                            if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                                matrix[i][j] = matrix[i - 1][j - 1];
-                            } else {
-                                matrix[i][j] = Math.min(
-                                    matrix[i - 1][j - 1] + 1,
-                                    matrix[i][j - 1] + 1,
-                                    matrix[i - 1][j] + 1
-                                );
-                            }
-                        }
-                    }
-                    return matrix[b.length][a.length];
-                }
-
-                // Find the closest match
-                const keywords = Object.keys(responses);
-                let closestMatch = 'default';
-                let minDistance = Infinity;
-                keywords.forEach(keyword => {
-                    const distance = levenshtein(message, keyword);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestMatch = keyword;
-                    }
-                });
-
-                response = responses[closestMatch];
-            }
-
-            chatbox.innerHTML += `<div class="chat-bubble">AIU-CG: ${response}</div>`;
-            memory.push({ type: 'bot', text: response });
-        }
-
-        function checkEnter(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        function newChat() {
-            const chatbox = document.getElementById('chatbox');
-            if (memory.length > 0) {
-                const title = memory[0].text || 'Untitled Chat';
-                chatHistory.push({ title, messages: [...memory] });
-                updateChatHistory();
-            }
-            chatbox.innerHTML = '';
-            memory.length = 0; // Clear memory
-            lastTopic = null; // Reset last topic
-        }
-
-        function updateChatHistory() {
-            const chatHistoryDiv = document.getElementById('chatHistory');
-            chatHistoryDiv.innerHTML = '';
-            chatHistory.forEach((chat, index) => {
-                const chatItem = document.createElement('div');
-                chatItem.className = 'chat-history-item';
-                chatItem.innerText = chat.title;
-                chatItem.onclick = () => loadChat(index);
-                chatHistoryDiv.appendChild(chatItem);
-            });
-        }
-
-        function loadChat(index) {
-            const chatbox = document.getElementById('chatbox');
-            chatbox.innerHTML = '';
-            chatHistory[index].messages.forEach(message => {
-                const messageClass = message.type === 'user' ? 'user' : '';
-                chatbox.innerHTML += `<div class="chat-bubble ${messageClass}">${message.type === 'user' ? 'User' : 'AIU-CG'}: ${message.text}</div>`;
-            });
-        }
+        document.getElementById('guestButton').addEventListener('click', function() {
+            window.location.href = '/ChatPage.html';
+        });
     </script>
+</body>
+</html>
 </body>
 </html> 
