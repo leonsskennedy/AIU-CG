@@ -13,7 +13,7 @@
         }
         .sidebar {
             width: 20%;
-            background-color: #29406B;
+            background-color: #2c3e50;
             color: white;
             padding: 20px;
         }
@@ -51,17 +51,18 @@
         }
         .message {
             margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 10px 15px;
+            border-radius: 10px;
             max-width: 70%;
+            word-wrap: break-word;
         }
         .user-message {
-            background-color: #29406B;
+            background-color: #b0c4de;
             color: white;
             margin-left: auto;
         }
         .bot-message {
-            background-color: #f0f0f0;
+            background-color: #d6e4f0;
             margin-right: auto;
         }
         .chat-input-container {
@@ -74,13 +75,13 @@
         .chat-input {
             flex: 1;
             padding: 10px;
-            border: 1px solid #29406B;
+            border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
         }
         .send-button {
             margin-left: 10px;
-            background-color: #29406B;
+            background-color: #007bff;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -88,61 +89,189 @@
             cursor: pointer;
         }
         .send-button:hover {
-            background-color: #1a2947;
+            background-color: #0056b3;
+        }
+        .chat-history-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .chat-history-item:hover {
+            background-color: #3b5998;
         }
     </style>
 </head>
 <body>
     <div class="sidebar">
         <h2>Chat History</h2>
+        <div id="chatHistory"></div>
     </div>
     <div class="chat-container">
         <div class="chat-header">
-            <img src="logo.png" alt="AIUCG Logo" onerror="this.textContent='AIU-CG Chat'">
-            <div class="profile-icon">U</div>
+            <img src="logo.png" alt="AIUCG Logo">
+            <div>
+                <div class="profile-icon">U</div>
+            </div>
         </div>
-        <div class="chat-box">
-            <div class="message bot-message">Hello! How can I help you today?</div>
+        <div class="chat-box" id="chatbox">
         </div>
         <div class="chat-input-container">
-            <input type="text" class="chat-input" placeholder="Type your message here...">
+            <input type="text" class="chat-input" id="userInput" placeholder="Type your message here..." onkeydown="checkEnter(event)">
             <button class="send-button" onclick="sendMessage()">Send</button>
         </div>
     </div>
 
     <script>
-        function sendMessage() {
-            const input = document.querySelector('.chat-input');
-            const chatBox = document.querySelector('.chat-box');
-            
-            if (input.value.trim() !== '') {
-                // Add user message
-                const userMessage = document.createElement('div');
-                userMessage.className = 'message user-message';
-                userMessage.textContent = input.value;
-                chatBox.appendChild(userMessage);
-                
-                // Add bot response
-                const botMessage = document.createElement('div');
-                botMessage.className = 'message bot-message';
-                botMessage.textContent = "I received your message: " + input.value;
-                setTimeout(() => {
-                    chatBox.appendChild(botMessage);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }, 500);
-                
-                // Clear input
-                input.value = '';
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
+        const memory = [];
+        const chatHistory = [];
+        let lastTopic = null;
+
+        const database = {
+            courses: [
+                { id: 1, name: 'Introduction to AI', location: 'A-North Wing, Room 101', time: '9:00-9:50' },
+                { id: 2, name: 'Data Structures', location: 'A-North Wing, Room 202', time: '10:00-11:30' },
+                { id: 3, name: 'Web Development', location: 'A-South Wing, Room 303', time: '12:00-12:50' },
+                { id: 4, name: 'Database Management System', location: 'A-South Wing, Room 404', time: '13:00-14:30' },
+                { id: 5, name: 'Digital Forensics', location: 'A-North Wing, Room 505', time: '15:00-16:15' }
+            ],
+            users: [
+                { id: 3, name: 'Fatma', enrolledCourses: [2, 4], email: 'fatma@example.com' },
+                { id: 4, name: 'Mariam', enrolledCourses: [3, 5], email: 'mariam@example.com' },
+                { id: 5, name: 'Hend', enrolledCourses: [1, 3], email: 'hend@example.com' },
+                { id: 6, name: 'Mohammed', enrolledCourses: [4, 5], email: 'mohammed@example.com' }
+            ],
+            instructors: [
+                { id: 1, name: 'Dr. Lavanya', teaches: [2], email: 'lavanya@example.com' },
+                { id: 2, name: 'Dr. Munni', teaches: [4], email: 'munni@example.com' },
+                { id: 3, name: 'Dr. Ali', teaches: [5], email: 'ali@example.com' },
+                { id: 4, name: 'Dr. Areej', teaches: [3], email: 'areej@example.com' }
+            ],
+            locations: [
+                { id: 1, name: 'A-North Wing', floors: ['Room 101', 'Room 202', 'Room 505'] },
+                { id: 2, name: 'A-South Wing', floors: ['Room 303', 'Room 404'] }
+            ]
+        };
+
+        const faqs = {
+            'what are the office hours?': 'Our office hours are from 8:00 AM to 5:00 PM, Monday to Friday.',
+            'how can i apply?': 'You can apply by visiting our admissions page at <a href="https://www.aiu.edu.kw/admissions" target="_blank">AIU Admissions</a>.',
+            'where is the campus located?': 'Our campus is located at AIU-Kuwait, Jahra, Kuwait.'
+        };
+
+        function simplifyText(text) {
+            return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
         }
 
-        // Allow sending message with Enter key
-        document.querySelector('.chat-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
+        function findBestMatch(input, possibilities) {
+            input = simplifyText(input);
+            let bestMatch = null;
+            let highestScore = 0;
+
+            possibilities.forEach(possibility => {
+                const simplified = simplifyText(possibility);
+                if (input.includes(simplified) || simplified.includes(input)) {
+                    const score = simplified.length;
+                    if (score > highestScore) {
+                        highestScore = score;
+                        bestMatch = possibility;
+                    }
+                }
+            });
+
+            return bestMatch;
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const chatbox = document.getElementById('chatbox');
+            const message = userInput.value.trim();
+            
+            if (message === '') return;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user-message';
+            userDiv.textContent = message;
+            chatbox.appendChild(userDiv);
+
+            userInput.value = '';
+
+            const simplifiedMessage = simplifyText(message);
+            let response = '';
+
+            const keywords = {
+                location: ['location', 'locate', 'where', 'place', 'room', 'find'],
+                teacher: ['teacher', 'teach', 'teaches', 'instructor', 'prof', 'professor'],
+                email: ['email', 'mail', 'contact', 'reach'],
+                hello: ['hello', 'hi', 'hey', 'helo', 'greetings'],
+                course: ['course', 'class', 'subject', 'courses']
+            };
+
+            if (keywords.location.some(word => simplifiedMessage.includes(word))) {
+                const courseName = database.courses.find(course => 
+                    simplifiedMessage.includes(simplifyText(course.name)) ||
+                    course.name.toLowerCase().split(' ').some(word => 
+                        simplifiedMessage.includes(word.toLowerCase())
+                    )
+                );
+
+                if (courseName) {
+                    response = `The location of ${courseName.name} is ${courseName.location}.`;
+                    lastTopic = courseName.name;
+                }
+            }
+            else if (keywords.teacher.some(word => simplifiedMessage.includes(word)) && lastTopic) {
+                const course = database.courses.find(c => c.name === lastTopic);
+                if (course) {
+                    const instructor = database.instructors.find(i => i.teaches.includes(course.id));
+                    if (instructor) {
+                        response = `${instructor.name} teaches ${lastTopic}.`;
+                    }
+                }
+            }
+            else if (keywords.email.some(word => simplifiedMessage.includes(word)) && lastTopic) {
+                const course = database.courses.find(c => c.name === lastTopic);
+                if (course) {
+                    const instructor = database.instructors.find(i => i.teaches.includes(course.id));
+                    if (instructor) {
+                        response = `The email for ${instructor.name} is ${instructor.email}.`;
+                    }
+                }
+            }
+            else if (keywords.course.some(word => simplifiedMessage.includes(word))) {
+                response = 'Here are some courses we offer: ' + database.courses.map(course => course.name).join(', ') + '.';
+            }
+            else if (keywords.hello.some(word => simplifiedMessage.includes(word))) {
+                response = 'Hello! I am AIU-CG. How can I assist you today?';
+            }
+            else {
+                for (let question in faqs) {
+                    if (simplifyText(question).includes(simplifiedMessage) || 
+                        simplifiedMessage.includes(simplifyText(question))) {
+                        response = faqs[question];
+                        break;
+                    }
+                }
+            }
+
+            if (!response) {
+                response = 'I am sorry, I do not understand that question. Can you ask something else?';
+            }
+
+            const botDiv = document.createElement('div');
+            botDiv.className = 'message bot-message';
+            botDiv.innerHTML = response;
+            chatbox.appendChild(botDiv);
+
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
                 sendMessage();
             }
-        });
+        }
     </script>
 </body>
 </html>
