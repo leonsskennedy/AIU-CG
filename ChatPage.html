@@ -160,29 +160,6 @@
             'where is the campus located?': 'Our campus is located at AIU-Kuwait, Jahra, Kuwait.'
         };
 
-        function simplifyText(text) {
-            return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-        }
-
-        function findBestMatch(input, possibilities) {
-            input = simplifyText(input);
-            let bestMatch = null;
-            let highestScore = 0;
-
-            possibilities.forEach(possibility => {
-                const simplified = simplifyText(possibility);
-                if (input.includes(simplified) || simplified.includes(input)) {
-                    const score = simplified.length;
-                    if (score > highestScore) {
-                        highestScore = score;
-                        bestMatch = possibility;
-                    }
-                }
-            });
-
-            return bestMatch;
-        }
-
         function sendMessage() {
             const userInput = document.getElementById('userInput');
             const chatbox = document.getElementById('chatbox');
@@ -190,65 +167,62 @@
             
             if (message === '') return;
 
+            // Add user message
             const userDiv = document.createElement('div');
             userDiv.className = 'message user-message';
             userDiv.textContent = message;
             chatbox.appendChild(userDiv);
 
+            // Clear input
             userInput.value = '';
 
-            const simplifiedMessage = simplifyText(message);
             let response = '';
+            const lowerMessage = message.toLowerCase();
 
-            const keywords = {
-                location: ['location', 'locate', 'where', 'place', 'room', 'find'],
-                teacher: ['teacher', 'teach', 'teaches', 'instructor', 'prof', 'professor'],
-                email: ['email', 'mail', 'contact', 'reach'],
-                hello: ['hello', 'hi', 'hey', 'helo', 'greetings'],
-                course: ['course', 'class', 'subject', 'courses']
-            };
-
-            if (keywords.location.some(word => simplifiedMessage.includes(word))) {
-                const courseName = database.courses.find(course => 
-                    simplifiedMessage.includes(simplifyText(course.name)) ||
-                    course.name.toLowerCase().split(' ').some(word => 
-                        simplifiedMessage.includes(word.toLowerCase())
-                    )
-                );
-
-                if (courseName) {
-                    response = `The location of ${courseName.name} is ${courseName.location}.`;
-                    lastTopic = courseName.name;
-                }
-            }
-            else if (keywords.teacher.some(word => simplifiedMessage.includes(word)) && lastTopic) {
-                const course = database.courses.find(c => c.name === lastTopic);
-                if (course) {
-                    const instructor = database.instructors.find(i => i.teaches.includes(course.id));
-                    if (instructor) {
-                        response = `${instructor.name} teaches ${lastTopic}.`;
-                    }
-                }
-            }
-            else if (keywords.email.some(word => simplifiedMessage.includes(word)) && lastTopic) {
-                const course = database.courses.find(c => c.name === lastTopic);
-                if (course) {
-                    const instructor = database.instructors.find(i => i.teaches.includes(course.id));
-                    if (instructor) {
-                        response = `The email for ${instructor.name} is ${instructor.email}.`;
-                    }
-                }
-            }
-            else if (keywords.course.some(word => simplifiedMessage.includes(word))) {
-                response = 'Here are some courses we offer: ' + database.courses.map(course => course.name).join(', ') + '.';
-            }
-            else if (keywords.hello.some(word => simplifiedMessage.includes(word))) {
+            // Check for greetings first
+            if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
                 response = 'Hello! I am AIU-CG. How can I assist you today?';
             }
+            // Check for instructor/teacher questions
+            else if (lowerMessage.includes('teach') || lowerMessage.includes('instructor') || lowerMessage.includes('professor')) {
+                for (let course of database.courses) {
+                    const courseName = course.name.toLowerCase();
+                    if (lowerMessage.includes(courseName) || 
+                        courseName.split(' ').some(word => lowerMessage.includes(word))) {
+                        const instructor = database.instructors.find(i => i.teaches.includes(course.id));
+                        if (instructor) {
+                            response = `${instructor.name} teaches ${course.name}.`;
+                            lastTopic = course.name;
+                            break;
+                        }
+                    }
+                }
+            }
+            // Check for course location
+            else if (lowerMessage.includes('location') || lowerMessage.includes('where')) {
+                for (let course of database.courses) {
+                    if (lowerMessage.includes(course.name.toLowerCase())) {
+                        response = `The location of ${course.name} is ${course.location}.`;
+                        lastTopic = course.name;
+                        break;
+                    }
+                }
+            }
+            // Check FAQs with more flexible matching
             else {
+                // Create simplified versions of questions for matching
+                const simplifyText = (text) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const userQuestion = simplifyText(message);
+
                 for (let question in faqs) {
-                    if (simplifyText(question).includes(simplifiedMessage) || 
-                        simplifiedMessage.includes(simplifyText(question))) {
+                    const simplifiedQuestion = simplifyText(question);
+                    
+                    // Check if the simplified user question contains most of the key words
+                    const questionWords = simplifiedQuestion.split(/[^a-z0-9]+/);
+                    const matchCount = questionWords.filter(word => userQuestion.includes(word)).length;
+                    
+                    // If most words match (allowing for some typos), consider it a match
+                    if (matchCount >= questionWords.length * 0.7) {
                         response = faqs[question];
                         break;
                     }
@@ -256,14 +230,16 @@
             }
 
             if (!response) {
-                response = 'I am sorry, I do not understand that question. Can you ask something else?';
+                response = "I'm sorry, I don't understand that question. Can you please rephrase it?";
             }
 
+            // Add bot response
             const botDiv = document.createElement('div');
             botDiv.className = 'message bot-message';
             botDiv.innerHTML = response;
             chatbox.appendChild(botDiv);
 
+            // Scroll to bottom
             chatbox.scrollTop = chatbox.scrollHeight;
         }
 
