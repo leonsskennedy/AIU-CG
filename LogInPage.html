@@ -67,6 +67,7 @@
         .input-box {
             width: 100%;
             margin-bottom: 15px;
+            position: relative;
         }
 
         .input-box input {
@@ -87,10 +88,91 @@
             cursor: pointer;
             font-size: 16px;
             margin-top: 10px;
+            position: relative;
+            transition: background-color 0.3s;
         }
 
-        .login-button:hover {
+        .login-button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .login-button:hover:not(:disabled) {
             background: #991b1b;
+        }
+
+        /* Add loading spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            display: none;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            text-align: left;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+            user-select: none;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .toggle-password svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .toggle-password .eye-off {
+            display: none;
+        }
+
+        /* Add shake animation for error */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.6s;
         }
 
         a {
@@ -117,17 +199,127 @@
     <div class="right-section">
         <div class="login-box">
             <h2>Log in</h2>
-            <form>
+            <form id="loginForm">
                 <div class="input-box">
-                    <input type="text" placeholder="Username">
+                    <input type="text" 
+                           id="username" 
+                           name="username" 
+                           placeholder="Username" 
+                           required
+                           autocomplete="username">
                 </div>
                 <div class="input-box">
-                    <input type="password" placeholder="Password">
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           placeholder="Password" 
+                           required
+                           autocomplete="current-password">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
+                        <svg class="eye" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <svg class="eye-off" viewBox="0 0 24 24">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                    </button>
                 </div>
-                <button type="submit" class="login-button">Log in</button>
+                <button type="submit" class="login-button">
+                    Log in
+                    <div class="spinner"></div>
+                </button>
+                <div id="error-message" class="error-message"></div>
             </form>
             <a href="index.html">Back to Home</a>
+            <a href="SignUpPage.html" style="margin-top: 5px;">Don't have an account? Sign up</a>
         </div>
     </div>
+
+    <script>
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.querySelector('.eye');
+            const eyeOffIcon = document.querySelector('.eye-off');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.style.display = 'none';
+                eyeOffIcon.style.display = 'block';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.style.display = 'block';
+                eyeOffIcon.style.display = 'none';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const spinner = submitButton.querySelector('.spinner');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Get form data
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            // Disable form and show loading state
+            submitButton.disabled = true;
+            spinner.style.display = 'block';
+            errorMessage.style.display = 'none';
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.text();
+                
+                if (response.ok) {
+                    // Login successful, redirect to ChatPage.html
+                    window.location.href = 'ChatPage.html';
+                } else {
+                    // Login failed, show error message with shake animation
+                    errorMessage.textContent = data + ". Please try again.";
+                    errorMessage.style.display = 'block';
+                    errorMessage.classList.add('shake');
+                    
+                    // Remove shake class after animation
+                    setTimeout(() => {
+                        errorMessage.classList.remove('shake');
+                    }, 600);
+                    
+                    // Clear the password field for security
+                    document.getElementById('password').value = '';
+                    // Focus on the password field for easier retry
+                    document.getElementById('password').focus();
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred. Please check your internet connection and try again.';
+                errorMessage.style.display = 'block';
+                console.error('Login error:', error);
+            } finally {
+                // Re-enable form and hide loading state
+                submitButton.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+
+        // Clear error message when user starts typing
+        document.getElementById('username').addEventListener('input', function() {
+            document.getElementById('error-message').style.display = 'none';
+        });
+        
+        document.getElementById('password').addEventListener('input', function() {
+            document.getElementById('error-message').style.display = 'none';
+        });
+    </script>
 </body>
 </html>

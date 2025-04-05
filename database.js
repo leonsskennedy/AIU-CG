@@ -1,26 +1,40 @@
 const sql = require("mssql");
 
-// Configuration for SQL Server Express
+// MSSQL Configuration
 const config = {
     user: "sa3",             // Your SQL Server username (e.g., "sa")
     password: "aiu123", // Your SQL Server password
-    server: "DESKTOP-0QPH76G\SQLEXPRESS",      // SQL Server host (use IP or hostname if not localhost)
+    server: "localhost",      // Your SQL Server address
     database: "aiucg",   // Your database name
     options: {
-        encrypt: true,        // Use encryption (recommended for Azure SQL or secure connections)
-        trustServerCertificate: true, // Disable SSL verification (not recommended for production)
+        encrypt: false,        // Set to false for local connections
+        trustServerCertificate: true, // Change to true for local dev / self-signed certs
     },
 };
 
-// Create a pool of connections
+// Function to connect to the database and return the pool
 async function connectToDatabase() {
     try {
         const pool = await sql.connect(config);
-        console.log("Connected to SQL Server!");
-        return pool; // Return the pool to be used in other files
+        console.log("Connected to MSSQL");
+        
+        // Create Users table if it doesn't exist
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
+            CREATE TABLE Users (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                Username NVARCHAR(50) NOT NULL UNIQUE,
+                Password NVARCHAR(255) NOT NULL,
+                CreatedAt DATETIME DEFAULT GETDATE()
+            )
+        `);
+        
+        console.log("Users table checked/created successfully");
+        return pool;
     } catch (err) {
-        console.error("Error connecting to SQL Server:", err);
-        throw err; // Re-throw the error for handling in the caller
+        console.error("Database connection error:", err);
+        throw err; // Re-throw the error to be handled by the caller
     }
 }
+
 module.exports = connectToDatabase;
