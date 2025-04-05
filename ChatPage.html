@@ -155,7 +155,7 @@
         };
 
         const faqs = {
-            'what are the office hours?': 'Our office hours are from 8:00 AM to 5:00 PM, Monday to Friday.',
+            'when does the tutoring center open?': 'Our tutoring center are open from 8:00 AM to 5:00 PM, Sunday to Thursday.',
             'how can i apply?': 'You can apply by visiting our admissions page at <a href="https://www.aiu.edu.kw/admissions" target="_blank">AIU Admissions</a>.',
             'where is the campus located?': 'Our campus is located at AIU-Kuwait, Jahra, Kuwait.'
         };
@@ -182,6 +182,45 @@
             // Check for greetings first
             if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
                 response = 'Hello! I am AIU-CG. How can I assist you today?';
+            }
+            // Check for email requests
+            else if (lowerMessage.includes('email') || 
+                    (lowerMessage.includes('what') && lowerMessage.includes('her') && lastTopic) ||
+                    (lowerMessage.includes('what') && lowerMessage.includes('his') && lastTopic)) {
+                
+                let professorName = '';
+                
+                // First, check if this is a follow-up question about the last mentioned professor
+                if ((lowerMessage.includes('her') || lowerMessage.includes('his')) && lastTopic) {
+                    // Find the instructor who teaches the last discussed course
+                    const lastCourse = database.courses.find(c => c.name === lastTopic);
+                    if (lastCourse) {
+                        const instructor = database.instructors.find(i => i.teaches.includes(lastCourse.id));
+                        if (instructor) {
+                            response = `${instructor.name}'s email is ${instructor.email}`;
+                        }
+                    }
+                }
+                
+                // If not a follow-up or no last topic, check for specific professor name
+                if (!response) {
+                    for (let instructor of database.instructors) {
+                        const fullName = instructor.name.toLowerCase();
+                        const nameParts = fullName.split(' ');
+                        
+                        // Check if any part of the instructor's name is in the message
+                        if (nameParts.some(part => lowerMessage.includes(part.toLowerCase()))) {
+                            response = `${instructor.name}'s email is ${instructor.email}`;
+                            break;
+                        }
+                    }
+                }
+                
+                // If still no response, list all professors
+                if (!response) {
+                    response = "Please specify which professor's email you're looking for. Here are our professors:\n" +
+                             database.instructors.map(i => `- ${i.name}`).join('\n');
+                }
             }
             // Check for instructor/teacher questions
             else if (lowerMessage.includes('teach') || lowerMessage.includes('instructor') || lowerMessage.includes('professor')) {
