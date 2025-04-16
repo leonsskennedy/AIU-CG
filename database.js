@@ -25,11 +25,51 @@ async function connectToDatabase() {
                 Id INT IDENTITY(1,1) PRIMARY KEY,
                 Username NVARCHAR(50) NOT NULL UNIQUE,
                 Password NVARCHAR(255) NOT NULL,
+                IsPrivileged BIT NOT NULL DEFAULT 0,
                 CreatedAt DATETIME DEFAULT GETDATE()
             )
         `);
+
         
-        console.log("Users table checked/created successfully");
+        // Create Students table if it doesn't exist
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Students' AND xtype='U')
+            CREATE TABLE Students (
+                StudentId INT IDENTITY(1,1) PRIMARY KEY,
+                FullName NVARCHAR(100) NOT NULL,
+                Email NVARCHAR(100) NOT NULL UNIQUE,
+                Major NVARCHAR(50) NOT NULL,
+                GPA DECIMAL(3,2) CHECK (GPA >= 0 AND GPA <= 4)
+            )
+        `);
+
+        // Create Courses table if it doesn't exist
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Courses' AND xtype='U')
+            CREATE TABLE Courses (
+                CourseId INT IDENTITY(1,1) PRIMARY KEY,
+                CourseName NVARCHAR(100) NOT NULL,
+                CourseCode NVARCHAR(20) NOT NULL UNIQUE,
+                Instructor NVARCHAR(100) NOT NULL,
+                Email NVARCHAR(100) NOT NULL
+            )
+        `);
+
+        // Create StudentCourses table for tracking enrolled courses
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='StudentCourses' AND xtype='U')
+            CREATE TABLE StudentCourses (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                StudentId INT NOT NULL,
+                CourseId INT NOT NULL,
+                Grade NVARCHAR(2),
+                Semester NVARCHAR(20) NOT NULL,
+                FOREIGN KEY (StudentId) REFERENCES Students(StudentId),
+                FOREIGN KEY (CourseId) REFERENCES Courses(CourseId)
+            )
+        `);
+        
+        console.log("Tables checked/created successfully");
         return pool;
     } catch (err) {
         console.error("Database connection error:", err);

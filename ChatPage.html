@@ -124,8 +124,7 @@
     </div>
 
     <script>
-        const memory = [];
-        const chatHistory = [];
+        let currentUser = null;
         let lastTopic = null;
 
         const database = {
@@ -135,12 +134,6 @@
                 { id: 3, name: 'Web Development', location: 'A-South Wing, Room 303', time: '12:00-12:50' },
                 { id: 4, name: 'Database Management System', location: 'A-South Wing, Room 404', time: '13:00-14:30' },
                 { id: 5, name: 'Digital Forensics', location: 'A-North Wing, Room 505', time: '15:00-16:15' }
-            ],
-            users: [
-                { id: 3, name: 'Fatma', enrolledCourses: [2, 4], email: 'fatma@example.com' },
-                { id: 4, name: 'Mariam', enrolledCourses: [3, 5], email: 'mariam@example.com' },
-                { id: 5, name: 'Hend', enrolledCourses: [1, 3], email: 'hend@example.com' },
-                { id: 6, name: 'Mohammed', enrolledCourses: [4, 5], email: 'mohammed@example.com' }
             ],
             instructors: [
                 { id: 1, name: 'Dr. Lavanya', teaches: [2], email: 'lavanya@example.com' },
@@ -155,131 +148,176 @@
         };
 
         const faqs = {
-            'when does the tutoring center open?': 'Our tutoring center are open from 8:00 AM to 5:00 PM, Sunday to Thursday.',
+            'when does the tutoring center open?': 'Our tutoring center is open from 8:00 AM to 5:00 PM, Sunday to Thursday.',
             'how can i apply?': 'You can apply by visiting our admissions page at <a href="https://www.aiu.edu.kw/admissions" target="_blank">AIU Admissions</a>.',
             'where is the campus located?': 'Our campus is located at AIU-Kuwait, Jahra, Kuwait.'
         };
 
+        // Check if user is logged in
+        async function checkLogin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isGuest = urlParams.get('guest') === 'true';
+
+            if (isGuest) {
+                // Skip login check for guests
+                addMessage('bot', "Welcome, guest! How can I help you today?");
+                return;
+            }
+
+            try {
+                const response = await fetch('/check-login');
+                if (!response.ok) {
+                    window.location.href = 'LogInPage.html';
+                    return;
+                }
+                currentUser = await response.json();
+                updateUIForPrivilegeLevel();
+                addMessage('bot', `Welcome${currentUser.isPrivileged ? ' ' + currentUser.username : ''}! How can I help you today?`);
+            } catch (error) {
+                console.error('Error checking login status:', error);
+                window.location.href = 'LogInPage.html';
+            }
+        }
+
+        function updateUIForPrivilegeLevel() {
+            const chatInput = document.getElementById('userInput');
+            const placeholder = currentUser.isPrivileged 
+                ? 'Ask about university information...' 
+                : 'Ask about general information...';
+            chatInput.placeholder = placeholder;
+        }
+
+        function handleUserMessage(message) {
+            console.log('Received message:', message);
+            const lowerMessage = message.toLowerCase();
+            console.log('Lowercase message:', lowerMessage);
+
+            // Check for greetings
+            if (lowerMessage.includes('hello') || 
+                lowerMessage.includes('hi') || 
+                lowerMessage.includes('hey')) {
+                console.log('Greeting detected');
+                addMessage('bot', `Hello${currentUser && currentUser.isPrivileged ? ' ' + currentUser.username : ''}! How can I help you today?`);
+                return;
+            }
+
+            // Check for email requests
+            if (lowerMessage.includes('email')) {
+                if (lowerMessage.includes('professor') || 
+                    lowerMessage.includes('dr') || 
+                    lowerMessage.includes('instructor')) {
+                    
+                    // Check for follow-up questions about the last topic
+                    if ((lowerMessage.includes('her') || lowerMessage.includes('his')) && lastTopic) {
+                        const instructor = database.instructors.find(i => 
+                            i.name.toLowerCase().includes(lastTopic.toLowerCase())
+                        );
+                        if (instructor) {
+                            addMessage('bot', `The email for ${instructor.name} is ${instructor.email}`);
+                            return;
+                        }
+                    }
+
+                    // Try to find the professor's name in the message
+                    const instructor = database.instructors.find(instructor => 
+                        lowerMessage.includes(instructor.name.toLowerCase().split(' ')[1].toLowerCase())
+                    );
+                    
+                    if (instructor) {
+                        addMessage('bot', `The email for ${instructor.name} is ${instructor.email}`);
+                        lastTopic = instructor.name;
+                    } else {
+                        // If no specific professor is mentioned, list all professors
+                        let response = "Which professor's email would you like? Here are our instructors:\n";
+                        database.instructors.forEach(instructor => {
+                            response += `- ${instructor.name}\n`;
+                        });
+                        addMessage('bot', response);
+                    }
+                    return;
+                }
+            }
+
+            // Check for course information
+            console.log('Checking for course information');
+            if (lowerMessage.includes('course') || 
+                lowerMessage.includes('class')) {
+                const course = database.courses.find(course => 
+                    lowerMessage.includes(course.name.toLowerCase())
+                );
+                console.log('Course found:', course);
+                
+                if (course) {
+                    const instructor = database.instructors.find(i => i.teaches.includes(course.id));
+                    console.log('Instructor found:', instructor);
+                    addMessage('bot', `${course.name} is held in ${course.location} at ${course.time}${instructor ? ` and is taught by ${instructor.name}` : ''}`);
+                    lastTopic = course.name;
+                } else {
+                    let response = "Here are our available courses:\n";
+                    database.courses.forEach(course => {
+                        response += `- ${course.name}\n`;
+                    });
+                    addMessage('bot', response);
+                }
+                return;
+            }
+
+            // Check for location information
+            if (lowerMessage.includes('where') || 
+                lowerMessage.includes('location')) {
+                const location = database.locations.find(loc => 
+                    lowerMessage.includes(loc.name.toLowerCase())
+                );
+                
+                if (location) {
+                    let response = `${location.name} has the following rooms:\n`;
+                    location.floors.forEach(floor => {
+                        response += `- ${floor}\n`;
+                    });
+                    addMessage('bot', response);
+                    lastTopic = location.name;
+                } else {
+                    let response = "Here are our locations:\n";
+                    database.locations.forEach(loc => {
+                        response += `- ${loc.name}\n`;
+                    });
+                    addMessage('bot', response);
+                }
+                return;
+            }
+
+            // Check for FAQ matches
+            const faqKey = Object.keys(faqs).find(key => 
+                lowerMessage.includes(key)
+            );
+            
+            if (faqKey) {
+                addMessage('bot', faqs[faqKey]);
+                return;
+            }
+
+            // If no specific match is found
+            addMessage('bot', "I'm sorry, I couldn't understand your question. Could you please rephrase it?");
+        }
+
+        function addMessage(sender, message) {
+            const chatbox = document.getElementById('chatbox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = message; // Changed to innerHTML to support links
+            chatbox.appendChild(messageDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
         function sendMessage() {
             const userInput = document.getElementById('userInput');
-            const chatbox = document.getElementById('chatbox');
             const message = userInput.value.trim();
             
-            if (message === '') return;
-
-            // Add user message
-            const userDiv = document.createElement('div');
-            userDiv.className = 'message user-message';
-            userDiv.textContent = message;
-            chatbox.appendChild(userDiv);
-
-            // Clear input
-            userInput.value = '';
-
-            let response = '';
-            const lowerMessage = message.toLowerCase();
-
-            // Check for greetings first
-            if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-                response = 'Hello! I am AIU-CG. How can I assist you today?';
+            if (message) {
+                addMessage('user', message);
+                handleUserMessage(message);
+                userInput.value = '';
             }
-            // Check for email requests
-            else if (lowerMessage.includes('email') || 
-                    (lowerMessage.includes('what') && lowerMessage.includes('her') && lastTopic) ||
-                    (lowerMessage.includes('what') && lowerMessage.includes('his') && lastTopic)) {
-                
-                let professorName = '';
-                
-                // First, check if this is a follow-up question about the last mentioned professor
-                if ((lowerMessage.includes('her') || lowerMessage.includes('his')) && lastTopic) {
-                    // Find the instructor who teaches the last discussed course
-                    const lastCourse = database.courses.find(c => c.name === lastTopic);
-                    if (lastCourse) {
-                        const instructor = database.instructors.find(i => i.teaches.includes(lastCourse.id));
-                        if (instructor) {
-                            response = `${instructor.name}'s email is ${instructor.email}`;
-                        }
-                    }
-                }
-                
-                // If not a follow-up or no last topic, check for specific professor name
-                if (!response) {
-                    for (let instructor of database.instructors) {
-                        const fullName = instructor.name.toLowerCase();
-                        const nameParts = fullName.split(' ');
-                        
-                        // Check if any part of the instructor's name is in the message
-                        if (nameParts.some(part => lowerMessage.includes(part.toLowerCase()))) {
-                            response = `${instructor.name}'s email is ${instructor.email}`;
-                            break;
-                        }
-                    }
-                }
-                
-                // If still no response, list all professors
-                if (!response) {
-                    response = "Please specify which professor's email you're looking for. Here are our professors:\n" +
-                             database.instructors.map(i => `- ${i.name}`).join('\n');
-                }
-            }
-            // Check for instructor/teacher questions
-            else if (lowerMessage.includes('teach') || lowerMessage.includes('instructor') || lowerMessage.includes('professor')) {
-                for (let course of database.courses) {
-                    const courseName = course.name.toLowerCase();
-                    if (lowerMessage.includes(courseName) || 
-                        courseName.split(' ').some(word => lowerMessage.includes(word))) {
-                        const instructor = database.instructors.find(i => i.teaches.includes(course.id));
-                        if (instructor) {
-                            response = `${instructor.name} teaches ${course.name}.`;
-                            lastTopic = course.name;
-                            break;
-                        }
-                    }
-                }
-            }
-            // Check for course location
-            else if (lowerMessage.includes('location') || lowerMessage.includes('where')) {
-                for (let course of database.courses) {
-                    if (lowerMessage.includes(course.name.toLowerCase())) {
-                        response = `The location of ${course.name} is ${course.location}.`;
-                        lastTopic = course.name;
-                        break;
-                    }
-                }
-            }
-            // Check FAQs with more flexible matching
-            else {
-                // Create simplified versions of questions for matching
-                const simplifyText = (text) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const userQuestion = simplifyText(message);
-
-                for (let question in faqs) {
-                    const simplifiedQuestion = simplifyText(question);
-                    
-                    // Check if the simplified user question contains most of the key words
-                    const questionWords = simplifiedQuestion.split(/[^a-z0-9]+/);
-                    const matchCount = questionWords.filter(word => userQuestion.includes(word)).length;
-                    
-                    // If most words match (allowing for some typos), consider it a match
-                    if (matchCount >= questionWords.length * 0.7) {
-                        response = faqs[question];
-                        break;
-                    }
-                }
-            }
-
-            if (!response) {
-                response = "I'm sorry, I don't understand that question. Can you please rephrase it?";
-            }
-
-            // Add bot response
-            const botDiv = document.createElement('div');
-            botDiv.className = 'message bot-message';
-            botDiv.innerHTML = response;
-            chatbox.appendChild(botDiv);
-
-            // Scroll to bottom
-            chatbox.scrollTop = chatbox.scrollHeight;
         }
 
         function checkEnter(event) {
@@ -287,7 +325,33 @@
                 sendMessage();
             }
         }
+
+        async function fetchCourses() {
+            try {
+                const response = await fetch('/api/courses');
+                const courses = await response.json();
+                // Use the courses data as needed
+            } catch (error) {
+                console.error('Error fetching courses:', error);
+            }
+        }
+
+        async function fetchInstructors() {
+            try {
+                const response = await fetch('/api/instructors');
+                const instructors = await response.json();
+                // Use the instructors data as needed
+            } catch (error) {
+                console.error('Error fetching instructors:', error);
+            }
+        }
+
+        // Initialize the chat
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchCourses();
+            fetchInstructors();
+            checkLogin();
+        });
     </script>
-    <script src="server.js"></script>
 </body>
 </html>

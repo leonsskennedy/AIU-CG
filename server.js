@@ -1,4 +1,5 @@
 const express = require('express');
+const session = require('express-session');
 const sql = require('mssql');
 const bcrypt = require('bcrypt');
 const path = require('path');
@@ -44,6 +45,14 @@ connectToDatabase()
         // The server will continue running but database operations will fail
     });
 
+// Set up express-session
+app.use(session({
+    secret: 'cappybara', // Replace with a strong secret key
+    resave: false,
+    saveUninitialized: true,
+   // cookie: { secure: false } // Set to true if using HTTPS
+}));
+
 // Signup route
 app.post('/signup', async (req, res) => {
     try {
@@ -55,8 +64,8 @@ app.post('/signup', async (req, res) => {
         const { username, password } = req.body;
 
         // Input validation
-        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/; // Only letters, numbers, underscore, length 3-20
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/; // At least 8 chars, 1 letter, 1 number
+        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
 
         if (!usernameRegex.test(username)) {
             return res.status(400).send("Username must be 3-20 characters long and can only contain letters, numbers, and underscores.");
@@ -77,10 +86,12 @@ app.post('/signup', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const result = await pool.request()
+        // Insert into Users table
+        await pool.request()
             .input('username', sql.NVarChar, username)
             .input('password', sql.NVarChar, hashedPassword)
-            .query('INSERT INTO [Users] (Username, Password) VALUES (@username, @password)');
+            .input('isPrivileged', sql.Bit, 1)  // Set all registered users as privileged
+            .query('INSERT INTO [Users] ( Username, Password, IsPrivileged) VALUES (@username, @password, @isPrivileged)');
 
         console.log("User registered:", username);
         res.status(201).send("Signup successful!");
@@ -88,7 +99,7 @@ app.post('/signup', async (req, res) => {
         console.error('Error during signup:', error);
         res.status(500).send(`Signup failed! Error: ${error.message}`);
     }
-}); 
+});
 
 // Login route
 app.post('/login', async (req, res) => {
@@ -120,13 +131,44 @@ app.post('/login', async (req, res) => {
         
         // Login successful
         console.log("User logged in:", username);
+        req.session.user = {
+            id: user.Id,
+            username: user.Username,
+            isPrivileged: user.IsPrivileged
+        };
         res.status(200).json({
             message: "Login successful",
-            redirect: "ChatPage.html"
+            redirect: "ChatPage.html",
+            user: {
+                id: user.Id,
+                username: user.Username,
+                isPrivileged: user.IsPrivileged
+            }
         });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).send(`Login failed! Error: ${error.message}`);
+    }
+});
+
+// Check login status
+app.get('/check-login', async (req, res) => {
+    try {
+        // For now, we'll just check if there's a user in the session
+        // In a real application, you'd want to verify the session token
+        if (!req.session || !req.session.user) {
+            return res.status(401).send("Not logged in");
+        }
+
+        const user = req.session.user;
+        res.json({
+            id: user.id,
+            username: user.username,
+            isPrivileged: user.isPrivileged
+        });
+    } catch (error) {
+        console.error('Error checking login status:', error);
+        res.status(500).send("Error checking login status");
     }
 });
 
