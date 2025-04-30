@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIU-CG Chat</title>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .sidebar {
+            width: 20%;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+        }
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f4f4f4;
+            padding: 10px;
+        }
+        .chat-header img {
+            width: 100px;
+        }
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #7F1D1D;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-size: 18px;
+        }
+        .chat-box {
+            flex: 1;
+            background-color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #b0c4de;
+            color: white;
+            margin-left: auto;
+        }
+        .bot-message {
+            background-color: #d6e4f0;
+            margin-right: auto;
+        }
+        .chat-input-container {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background-color: white;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .send-button {
+            margin-left: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .send-button:hover {
+            background-color: #0056b3;
+        }
+        .chat-history-item {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .chat-history-item:hover {
+            background-color: #3b5998;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Chat History</h2>
+        <div id="chatHistory"></div>
+    </div>
+    <div class="chat-container">
+        <div class="chat-header">
+            <img src="logo.png" alt="AIUCG Logo">
+            <div>
+                <div class="profile-icon">U</div>
+            </div>
+        </div>
+        <div class="chat-box" id="chatbox">
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="userInput" placeholder="Type your message here..." onkeydown="checkEnter(event)">
+            <button class="send-button" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let lastTopic = null;
+
+        /*const database = {
+            courses: [
+                { id: 1, name: 'Introduction to AI', location: 'A-North Wing, Room 101', time: '9:00-9:50' },
+                { id: 2, name: 'Data Structures', location: 'A-North Wing, Room 202', time: '10:00-11:30' },
+                { id: 3, name: 'Web Development', location: 'A-South Wing, Room 303', time: '12:00-12:50' },
+                { id: 4, name: 'Database Management System', location: 'A-South Wing, Room 404', time: '13:00-14:30' },
+                { id: 5, name: 'Digital Forensics', location: 'A-North Wing, Room 505', time: '15:00-16:15' }
+            ],
+            instructors: [
+                { id: 1, name: 'Dr. Lavanya', teaches: [2], email: 'lavanya@example.com' },
+                { id: 2, name: 'Dr. Munni', teaches: [4], email: 'munni@example.com' },
+                { id: 3, name: 'Dr. Ali', teaches: [5], email: 'ali@example.com' },
+                { id: 4, name: 'Dr. Areej', teaches: [3], email: 'areej@example.com' }
+            ],
+            locations: [
+                { id: 1, name: 'A-North Wing', floors: ['Room 101', 'Room 202', 'Room 505'] },
+                { id: 2, name: 'A-South Wing', floors: ['Room 303', 'Room 404'] }
+            ]
+        };
+
+       */
+
+        /*const faqs = {
+            'when does the tutoring center open?': 'Our tutoring center is open from 8:00 AM to 5:00 PM, Sunday to Thursday.',
+            'how can i apply?': 'You can apply by visiting our admissions page at <a href="https://www.aiu.edu.kw/admissions" target="_blank">AIU Admissions</a>.',
+            'where is the campus located?': 'Our campus is located at AIU-Kuwait, Jahra, Kuwait.'
+        };*/
+
+        // Check if user is logged in
+        async function checkLogin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isGuest = urlParams.get('guest') === 'true';
+
+            if (isGuest) {
+                // Skip login check for guests
+                addMessage('bot', "Welcome, guest! How can I help you today?");
+                return;
+            }
+
+            try {
+                const response = await fetch('/check-login');
+                if (!response.ok) {
+                    window.location.href = 'LogInPage.html';
+                    return;
+                }
+                currentUser = await response.json();
+                updateUIForPrivilegeLevel();
+                addMessage('bot', `Welcome${currentUser.isPrivileged ? ' ' + currentUser.username : ''}! How can I help you today?`);
+            } catch (error) {
+                console.error('Error checking login status:', error);
+                window.location.href = 'LogInPage.html';
+            }
+        }
+
+        function updateUIForPrivilegeLevel() {
+            const chatInput = document.getElementById('userInput');
+            const placeholder = currentUser.isPrivileged 
+                ? 'Ask about university information...' 
+                : 'Ask about general information...';
+            chatInput.placeholder = placeholder;
+        }
+
+        function handleUserMessage(message) {
+            console.log('Received message:', message);
+            const lowerMessage = message.toLowerCase();
+            console.log('Lowercase message:', lowerMessage);
+
+            // Check for greetings
+            if (lowerMessage.includes('hello') || 
+                lowerMessage.includes('hi') || 
+                lowerMessage.includes('hey')) {
+                console.log('Greeting detected');
+                addMessage('bot', `Hello${currentUser && currentUser.isPrivileged ? ' ' + currentUser.username : ''}! How can I help you today?`);
+                return;
+            }
+
+            // Check for email requests
+            if (lowerMessage.includes('email')) {
+                if (lowerMessage.includes('professor') || 
+                    lowerMessage.includes('dr') || 
+                    lowerMessage.includes('instructor')) {
+                    
+                    // Check for follow-up questions about the last topic
+                    if ((lowerMessage.includes('her') || lowerMessage.includes('his')) && lastTopic) {
+                        const instructor = database.instructors.find(i => 
+                            i.name.toLowerCase().includes(lastTopic.toLowerCase())
+                        );
+                        if (instructor) {
+                            addMessage('bot', `The email for ${instructor.name} is ${instructor.email}`);
+                            return;
+                        }
+                    }
+
+                    // Try to find the professor's name in the message
+                    const instructor = database.instructors.find(instructor => 
+                        lowerMessage.includes(instructor.name.toLowerCase().split(' ')[1].toLowerCase())
+                    );
+                    
+                    if (instructor) {
+                        addMessage('bot', `The email for ${instructor.name} is ${instructor.email}`);
+                        lastTopic = instructor.name;
+                    } else {
+                        // If no specific professor is mentioned, list all professors
+                        let response = "Which professor's email would you like? Here are our instructors:\n";
+                        database.instructors.forEach(instructor => {
+                            response += `- ${instructor.name}\n`;
+                        });
+                        addMessage('bot', response);
+                    }
+                    return;
+                }
+            }
+
+            // Check for course information
+            console.log('Checking for course information');
+            if (lowerMessage.includes('course') || 
+                lowerMessage.includes('class')) {
+                const course = database.courses.find(course => 
+                    lowerMessage.includes(course.name.toLowerCase())
+                );
+                console.log('Course found:', course);
+                
+                if (course) {
+                    const instructor = database.instructors.find(i => i.teaches.includes(course.id));
+                    console.log('Instructor found:', instructor);
+                    addMessage('bot', `${course.name} is held in ${course.location} at ${course.time}${instructor ? ` and is taught by ${instructor.name}` : ''}`);
+                    lastTopic = course.name;
+                } else {
+                    let response = "Here are our available courses:\n";
+                    database.courses.forEach(course => {
+                        response += `- ${course.name}\n`;
+                    });
+                    addMessage('bot', response);
+                }
+                return;
+            }
+
+            // Check for location information
+            if (lowerMessage.includes('where') || 
+                lowerMessage.includes('location')) {
+                const location = database.locations.find(loc => 
+                    lowerMessage.includes(loc.name.toLowerCase())
+                );
+                
+                if (location) {
+                    let response = `${location.name} has the following rooms:\n`;
+                    location.floors.forEach(floor => {
+                        response += `- ${floor}\n`;
+                    });
+                    addMessage('bot', response);
+                    lastTopic = location.name;
+                } else {
+                    let response = "Here are our locations:\n";
+                    database.locations.forEach(loc => {
+                        response += `- ${loc.name}\n`;
+                    });
+                    addMessage('bot', response);
+                }
+                return;
+            }
+
+            // Check for FAQ matches
+            const faqKey = Object.keys(faqs).find(key => 
+                lowerMessage.includes(key)
+            );
+            
+            if (faqKey) {
+                addMessage('bot', faqs[faqKey]);
+                return;
+            }
+
+            // If no specific match is found
+            addMessage('bot', "I'm sorry, I couldn't understand your question. Could you please rephrase it?");
+        }
+
+        function addMessage(sender, message) {
+            const chatbox = document.getElementById('chatbox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = message; // Changed to innerHTML to support links
+            chatbox.appendChild(messageDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+      /*  function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const message = userInput.value.trim();
+            
+            if (message) {
+                addMessage('user', message);
+                handleUserMessage(message);
+                userInput.value = '';
+            }
+        } */
+
+        async function sendMessage() {
+    const userInput = document.getElementById('userInput').value;
+    if (!userInput.trim()) return;
+
+    // Add user message to chat
+    addMessage(userInput, 'user-message');
+    document.getElementById('userInput').value = '';
+
+    // Send message to Dialogflow
+    const projectId = 'aiu-cg'; // Replace with your Dialogflow project ID
+    const response = await fetch('https://dialogflow.cloud.google.com/v1/integrations/messenger/webhook/YOUR_PROJECT_ID', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            queryInput: {
+                text: {
+                    text: userInput,
+                    languageCode: 'en'
+                }
+            }
+        })
+    });
+
+    const data = await response.json();
+    const botResponse = data.queryResult.fulfillmentText;
+
+    // Add bot message to chat
+    addMessage(botResponse, 'bot-message');
+}
+
+function addMessage(message, className) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message ' + className;
+    messageElement.textContent = message;
+    document.getElementById('chatbox').appendChild(messageElement);
+}
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function fetchCourses() {
+            try {
+                const response = await fetch('/api/courses');
+                const courses = await response.json();
+                // Use the courses data as needed
+            } catch (error) {
+                console.error('Error fetching courses:', error);
+            }
+        }
+
+        async function fetchInstructors() {
+            try {
+                const response = await fetch('/api/instructors');
+                const instructors = await response.json();
+                // Use the instructors data as needed
+            } catch (error) {
+                console.error('Error fetching instructors:', error);
+            }
+        }
+
+        // Initialize the chat
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchCourses();
+            fetchInstructors();
+            checkLogin();
+        });
+    </script>
+</body>
+</html>

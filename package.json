@@ -11,9 +11,12 @@
     "license": "ISC",
     "description": "AIUChatBot is a university virtual assistant designed to help students at the American International University – Jahra, Kuwait. It provides answers to common university-related questions, including academic information, campus navigation, and student services.",
     "dependencies": {
+        "@google-cloud/dialogflow": "^7.0.1",
         "bcrypt": "^5.1.1",
         "bcryptjs": "^3.0.2",
         "body-parser": "^1.20.3",
+        "dialogflow": "^1.2.0",
+        "dotenv": "^16.5.0",
         "express": "^4.21.2",
         "express-session": "^1.18.1",
         "mssql": "^11.0.1"

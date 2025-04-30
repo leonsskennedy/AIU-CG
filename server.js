@@ -1,178 +1,185 @@
 const express = require('express');
 const session = require('express-session');
-const sql = require('mssql');
 const bcrypt = require('bcrypt');
 const path = require('path');
-const connectToDatabase = require('./database'); // Import the database connection module
+const { sql, poolPromise } = require('./database'); // Correct import
 const app = express();
 const PORT = process.env.PORT || 3000;
+const dialogflow = require('@google-cloud/dialogflow');
+const uuid = require('uuid');
+require('dotenv').config();
 
-// Middleware to parse JSON bodies
+// Dialogflow setup
+process.env.GOOGLE_APPLICATION_CREDENTIALS = './key.json';
+const projectId = 'aiu-cg';
+const sessionClient = new dialogflow.SessionsClient();
+const sessionId = uuid.v4();
+
+// Helper: send query to Dialogflow
+async function detectIntent(text) {
+  const sessionPath = sessionClient.projectAgentSessionPath(projectId, sessionId);
+  const request = {
+    session: sessionPath,
+    queryInput: {
+      text: { text: text, languageCode: 'en' },
+    },
+  };
+  const [response] = await sessionClient.detectIntent(request);
+  return response.queryResult;
+}
+
+// Middleware
 app.use(express.json());
-
-// Serve static files from the current directory
 app.use(express.static(__dirname));
 
-// Serve the home page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Serve the signup page
-app.get('/SignUpPage.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'SignUpPage.html'));
-});
-
-// Serve the login page
-app.get('/LogInPage.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'LogInPage.html'));
-});
-
-// Serve the chat page
-app.get('/ChatPage.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'ChatPage.html'));
-});
-
-// Connect to the database and store pool
-connectToDatabase()
-    .then(pool => {
-        console.log('Connected to MSSQL');
-        app.locals.pool = pool;
-    })
-    .catch(err => {
-        console.error('Database connection error:', err);
-        // Don't exit the process, just log the error
-        // The server will continue running but database operations will fail
-    });
-
-// Set up express-session
+// Sessions
 app.use(session({
-    secret: 'cappybara', // Replace with a strong secret key
-    resave: false,
-    saveUninitialized: true,
-   // cookie: { secure: false } // Set to true if using HTTPS
+  secret: 'your_secret_key',
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    secure: false,
+    sameSite: 'lax'
+  }
 }));
 
-// Signup route
-app.post('/signup', async (req, res) => {
-    try {
-        const pool = req.app.locals.pool;
-        if (!pool) {
-            return res.status(500).send("Database connection not established.");
-        }
+// Routes - Serve pages
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/SignUpPage.html', (req, res) => res.sendFile(path.join(__dirname, 'SignUpPage.html')));
+app.get('/LogInPage.html', (req, res) => res.sendFile(path.join(__dirname, 'LogInPage.html')));
+app.get('/ChatPage.html', (req, res) => res.sendFile(path.join(__dirname, 'ChatPage.html')));
 
-        const { username, password } = req.body;
+// Signup
+app.post('/SignUpPage', async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const { username, password } = req.body;
 
-        // Input validation
-        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
 
-        if (!usernameRegex.test(username)) {
-            return res.status(400).send("Username must be 3-20 characters long and can only contain letters, numbers, and underscores.");
-        }
-
-        if (!passwordRegex.test(password)) {
-            return res.status(400).send("Password must be at least 8 characters long and contain at least one letter and one number.");
-        }
-
-        // Check if username already exists
-        const checkUser = await pool.request()
-            .input('username', sql.NVarChar, username)
-            .query('SELECT Username FROM [Users] WHERE Username = @username');
-
-        if (checkUser.recordset.length > 0) {
-            return res.status(409).send("Username already exists. Please choose a different username.");
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Insert into Users table
-        await pool.request()
-            .input('username', sql.NVarChar, username)
-            .input('password', sql.NVarChar, hashedPassword)
-            .input('isPrivileged', sql.Bit, 1)  // Set all registered users as privileged
-            .query('INSERT INTO [Users] ( Username, Password, IsPrivileged) VALUES (@username, @password, @isPrivileged)');
-
-        console.log("User registered:", username);
-        res.status(201).send("Signup successful!");
-    } catch (error) {
-        console.error('Error during signup:', error);
-        res.status(500).send(`Signup failed! Error: ${error.message}`);
+    if (!usernameRegex.test(username)) {
+      return res.status(400).send("Invalid username format.");
     }
+    if (!passwordRegex.test(password)) {
+      return res.status(400).send("Weak password.");
+    }
+
+    const existing = await pool.request()
+      .input('username', sql.NVarChar, username)
+      .query('SELECT Username FROM [Users] WHERE Username = @username');
+
+    if (existing.recordset.length > 0) {
+      return res.status(409).send("Username already exists.");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await pool.request()
+      .input('username', sql.NVarChar, username)
+      .input('password', sql.NVarChar, hashedPassword)
+      .input('isPrivileged', sql.Bit, 1)
+      .query('INSERT INTO [Users] (Username, Password, IsPrivileged) VALUES (@username, @password, @isPrivileged)');
+
+    res.status(201).send("Signup successful!");
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).send("Signup failed.");
+  }
 });
 
-// Login route
-app.post('/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        
-        const pool = req.app.locals.pool;
-        if (!pool) {
-            return res.status(500).send("Database connection not established.");
-        }
-        
-        // Find the user in the database
-        const result = await pool.request()
-            .input('username', sql.NVarChar, username)
-            .query('SELECT * FROM [Users] WHERE Username = @username');
-            
-        if (result.recordset.length === 0) {
-            return res.status(401).send("Invalid username or password");
-        }
-        
-        const user = result.recordset[0];
-        
-        // Compare the provided password with the stored hashed password
-        const passwordMatch = await bcrypt.compare(password, user.Password);
-        
-        if (!passwordMatch) {
-            return res.status(401).send("Invalid username or password");
-        }
-        
-        // Login successful
-        console.log("User logged in:", username);
-        req.session.user = {
-            id: user.Id,
-            username: user.Username,
-            isPrivileged: user.IsPrivileged
-        };
-        res.status(200).json({
-            message: "Login successful",
-            redirect: "ChatPage.html",
-            user: {
-                id: user.Id,
-                username: user.Username,
-                isPrivileged: user.IsPrivileged
-            }
-        });
-    } catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).send(`Login failed! Error: ${error.message}`);
+// Login
+app.post('/LogInPage', async (req, res) => {
+  const { username, password } = req.body;
+  const pool = await poolPromise;
+  const result = await pool.request()
+    .input('username', sql.VarChar, username)
+    .query('SELECT * FROM Users WHERE Username = @username');
+
+  if (result.recordset.length > 0) {
+    const user = result.recordset[0];
+    const match = await bcrypt.compare(password, user.Password);
+
+    if (match) {
+      req.session.loggedIn = true;
+      req.session.username = user.FullName || user.Username;
+      return res.status(200).send("Login successful");
     }
+  }
+
+  res.status(401).send("Invalid credentials");
 });
 
-// Check login status
-app.get('/check-login', async (req, res) => {
-    try {
-        // For now, we'll just check if there's a user in the session
-        // In a real application, you'd want to verify the session token
-        if (!req.session || !req.session.user) {
-            return res.status(401).send("Not logged in");
-        }
+// Chat route
+app.post('/chat', async (req, res) => {
+  const message = req.body.message.toLowerCase();
+  const isLoggedIn = req.session.loggedIn === true;
+  const username = req.session.username || 'Guest';
 
-        const user = req.session.user;
-        res.json({
-            id: user.id,
-            username: user.username,
-            isPrivileged: user.isPrivileged
-        });
-    } catch (error) {
-        console.error('Error checking login status:', error);
-        res.status(500).send("Error checking login status");
+  console.log("Session username:", username);
+
+  const protectedIntents = ['GetStudentGrades', 'GPA', 'GetProfileInfo'];
+
+  try {
+    if (message === 'welcome') {
+      return res.json({ reply: `Hello, ${username}! How can I assist you today?` });
     }
+
+    const dialogflowResponse = await detectIntent(message);
+    const intent = dialogflowResponse.intent.displayName;
+
+    if (protectedIntents.includes(intent) && !isLoggedIn) {
+      return res.json({ reply: '❌ Access Denied: Please login to access student data.' });
+    }
+
+    if (intent === 'GPA') {
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('username', sql.VarChar, username)
+        .query('SELECT GPA FROM Students WHERE FullName = @username');
+
+      if (result.recordset.length > 0) {
+        const GPA = result.recordset[0].GPA;
+        return res.json({ reply: `Your GPA is: ${GPA}` });
+      } else {
+        return res.json({ reply: '❌ No GPA data found.' });
+      }
+    }
+
+    const fallback = dialogflowResponse.fulfillmentText || "I'm not sure how to help with that yet.";
+    res.json({ reply: fallback });
+
+  } catch (err) {
+    console.error('Chat error:', err);
+    res.status(500).json({ reply: 'Something went wrong on the server.' });
+  }
 });
 
-// Start the server
+// Webhook route (if needed)
+app.post('/webhook', express.json(), async (req, res) => {
+  const intent = req.body.queryResult.intent.displayName;
+  const username = req.session.username || 'Guest';
+
+  if (intent === 'GPA') {
+    try {
+      const result = await poolPromise.request()
+        .input('username', sql.VarChar, username)
+        .query('SELECT GPA FROM Students WHERE FullName = @username');
+
+      if (result.recordset.length > 0) {
+        const gpa = result.recordset[0].GPA;
+        return res.json({ fulfillmentText: `Your GPA is: ${gpa}` });
+      } else {
+        return res.json({ fulfillmentText: "No GPA data found." });
+      }
+    } catch (error) {
+      return res.json({ fulfillmentText: "There was an error retrieving your GPA." });
+    }
+  }
+
+  res.json({ fulfillmentText: "I'm not sure how to help with that yet." });
+});
+
+// Start server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-}); 
+  console.log(`🚀 Server is running at http://localhost:${PORT}`);
+});

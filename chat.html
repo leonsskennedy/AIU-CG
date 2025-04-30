@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Chatbot</title>
+</head>
+<body>
+  <h1>Chat with the University Chatbot</h1>
+
+  <div id="chatbox">
+    <div id="chatlog"></div>
+  </div>
+
+  <input type="text" id="user-input" placeholder="Type your message..." />
+  <button id="send-btn">Send</button>
+<!---
+  <script>
+    const chatlog = document.getElementById('chatlog');
+
+    function displayMessage(sender, message) {
+      chatlog.innerHTML += `<p><strong>${sender}:</strong> ${message}</p>`;
+    }
+
+    document.getElementById('send-btn').addEventListener('click', () => {
+      const userInput = document.getElementById('user-input').value;
+
+      if (userInput.trim()) {
+        displayMessage('You', userInput);
+        document.getElementById('user-input').value = '';
+
+        fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: userInput }),
+        })
+        .then(res => res.json())
+        .then(data => {
+          displayMessage('Bot', data.reply);
+        })
+        .catch(err => {
+          console.error('Fetch error:', err);
+          displayMessage('Bot', 'Error occurred');
+        });
+      }
+    });
+
+    // 👇 NEW: Automatically send a welcome trigger on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'welcome' }) 
+      
+      })
+      .then(response => response.json())
+      .then(data => {
+        displayMessage('Bot', data.reply);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+  </script> -->
+  <script>
+    const chatlog = document.getElementById('chatlog');
+  
+    function displayMessage(sender, message) {
+      chatlog.innerHTML += `<p><strong>${sender}:</strong> ${message}</p>`;
+    }
+  
+    document.getElementById('send-btn').addEventListener('click', () => {
+      const userInput = document.getElementById('user-input').value;
+  
+      if (userInput.trim()) {
+        displayMessage('You', userInput);
+        document.getElementById('user-input').value = '';
+  
+        fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: userInput }),
+          credentials: 'include' // ✅ ADD THIS
+        })
+        .then(res => res.json())
+        .then(data => {
+          displayMessage('Bot', data.reply);
+        })
+        .catch(err => {
+          console.error('Fetch error:', err);
+          displayMessage('Bot', 'Error occurred');
+        });
+      }
+    });
+  
+    // ✅ Auto-trigger on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'welcome' }),
+        credentials: 'include' // ✅ ADD THIS TOO
+      })
+      .then(response => response.json())
+      .then(data => {
+        displayMessage('Bot', data.reply);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+  </script>
+  
+  
+</body>
+</html>
